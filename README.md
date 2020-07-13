@@ -269,7 +269,7 @@ initProducer();
 + ### **Some of the problems/notes encountered** :
     1. #### When the consumer bind queue, the parameter `pattern(routingKey)` is a number-as-a-string which indicates the binding weight: the number of buckets (range of the message-id) that will be associated with the target queue.
 
-    2. #### If there are two queues (Q1, Q2) before, consumer sends 100 (id 0~100) MSG to these two queues (Q1, Q2). In this process, if a new queue(Q3) is added, then Consumer sends 100 (ID 0~100) MSG again, and MSG (sent for the second time) is reassigned between the three queues, which will cause the order of consumption to be disrupted.
+    2. #### If there are two queues (Q1, Q2) before, consumer sends 100 (id 0 - 100) msgs to these two queues (Q1, Q2). In this process, if a new queue(Q3) is added, then Consumer sends 100 (ID 0 - 100) msgs again, and msgs (sent for the second time) is reassigned between the three queues, which will cause the order of consumption to be disrupted.
 
 + ### **Problems that need to be solved** :
     1. #### How do you ensure that the Queue corresponds to only one consumer;
