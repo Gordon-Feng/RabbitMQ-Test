@@ -1,4 +1,11 @@
-var amqp = require('amqplib/callback_api');
+const amqp = require('amqplib');
+const { rabbitmq } = require('../config');
+
+const initProducer = (async () => {
+    const connection = await amqp.connect(rabbitmq.connectUrl);
+    const channel = await connection.createChannel()
+    await channel.assertExchange(rabbitmq.consistent.exchange.name, rabbitmq.consistent.exchange.type, { durable: true });
+});
 
 amqp.connect('amqp://localhost', function(error0, connection) {
   if (error0) {

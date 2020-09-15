@@ -1,49 +1,37 @@
-const amqp = require('amqplib/callback_api');
+const amqp = require('amqplib');
 const uuid = require('node-uuid');
+const Redis = require('ioredis');
+const { rabbitmq, redis } = require('../config');
+const redisClient = new Redis(redis);
 
-amqp.connect('amqp://localhost', function(error, connection) {
-    if (error) {
-        throw error;
+const initConsumer = (async () => {
+    try {
+        const connection = await amqp.connect(rabbitmq.connectUrl);
+        const channel = await connection.createChannel();
+        const queueName = `${rabbitmq.consistent.queue}-${uuid.v4()}`;
+
+        await channel.prefetch(1);
+        await channel.assertExchange(rabbitmq.consistent.exchange.name, rabbitmq.consistent.exchange.type, { durable: true });
+        await channel.assertQueue(queueName, { exclusive: false });
+        await channel.bindQueue(queueName, '');
+
+        await channel.consume(queueName, (msg) => {
+            setTimeout(async () => {
+                if(msg.content) {
+                    const message = JSON.parse(msg.content.toString());
+                    await redisClient.set(`x-consistent-hash:${message.id}`, message.action);// create | update
+                }
+                channel.ack(msg);
+            }, 1000);
+        }, { noAck: false });
+
+        console.info('Init consumer successfully !');
+    } catch (error) {
+        console.error('Init consumer failed:', error);
     }
-    connection.createChannel(function(error, channel) {
-        if (error) {
-            throw error;
-        }
-
-        const exchangeName = 'consistent_exchange';
-        const exchangeType = 'x-consistent-hash';
-        const routingPattern = process.argv[2];
-        const queueName = `data-sync-${uuid.v4()}`;
-        // const queueName = 'data-sync-46a8c852-564c-477c-acc6-a3ad2dc4642a';
-
-        channel.assertExchange(exchangeName, exchangeType, {
-            durable: true
-        });
-
-        channel.prefetch(1);
-
-        channel.assertQueue(queueName, { exclusive: true, autoDelete: true }, function(error, queue) {
-            if (error) {
-                throw error;
-            }
-            console.log(`Consumer[${process.argv[2]}] Create Success For Queue: ${queueName}!`);
-
-            channel.bindQueue(queue.queue, exchangeName, routingPattern);
-
-            channel.consume(queue.queue,async function(msg) {
-                // Simulated time-consuming operation
-                setTimeout(() => {
-                    if(msg.content) {
-                        console.log(`Current consumerTag: ${msg.fields.consumerTag}`);
-                        console.log(`Received Messsge From Consumer[${process.argv[2]}]:${msg.content.toString()}`);
-                        console.log(' ');
-                        console.log(' ');
-                    }
-                    channel.ack(msg);
-                }, 1000);
-            }, {
-                noAck: false
-            });
-        });
-    });
 });
+
+initConsumer();
+
+// 使用方式
+// CMD: node ./consistent_hash/consumer.js

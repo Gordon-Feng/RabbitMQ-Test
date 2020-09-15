@@ -12,7 +12,6 @@ const initConsumer = (async () => {
         const exchangeType = 'x-consistent-hash';
         const routingPattern = process.argv[2];
         const queueName = `data-sync-${uuid.v4()}`;
-        // const queueName = `data-sync-test`;
 
         await channel.prefetch(1);
 
@@ -29,16 +28,19 @@ const initConsumer = (async () => {
         await channel.consume(queueName, (msg) => {
             setTimeout(async () => {
                 if(msg.content) {
+                    console.log(`Received Messsge From Consumer[${process.argv[2]}]:${msg.content.toString()}`);
+                    console.log(' ');
+
                     const msgObj = JSON.parse(msg.content.toString());
+                    // 在 Redis 中检查该 msgId 是否存在 
+                    const targetQueue = await redisClient.get(`x-consistent-hash:${msgObj.msgId}`);
+                    if( !targetQueue || targetQueue === queueName )
+
                     if(msgObj.order === '1') {
                         redisClient.set(`x-consistent-hash:${msgObj.msgId}`, 'create');
                     } else if(msgObj.order === '2') {
                         redisClient.set(`x-consistent-hash:${msgObj.msgId}`, 'update');
                     }
-                    console.log(`Current consumerTag: ${msg.fields.consumerTag}`);
-                    console.log(`Received Messsge From Consumer[${process.argv[2]}]:${msg.content.toString()}`);
-                    console.log(' ');
-                    console.log(' ');
                     if(msgObj.msgId === 99) {
                         redisClient.get(['x-consistent-hash:*'], function(error, redisResult) {
                             if(error){
@@ -51,23 +53,10 @@ const initConsumer = (async () => {
                 channel.ack(msg);
             }, 1000);
         }, { noAck: false });
+
     } catch (error) {
         console.error('Catch Some Error:', error);
     }
 });
 
 initConsumer();
-
-// let total = 0;
-// for (let i = 0; i < 100; i++) {
-//     redisClient.get([`x-consistent-hash:${i}`], function(error, redisResult) {
-//         if(error){
-//             throw error;
-//         }
-//         if(redisResult === 'create') {
-//             total = total + 1;
-//         }
-//         console.log(`redisResult:${redisResult}`);
-//         console.log('total:', total);
-//     });
-// }

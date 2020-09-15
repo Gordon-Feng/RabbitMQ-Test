@@ -1,44 +1,44 @@
-const amqp = require('amqplib/callback_api');
+const amqp = require('amqplib');
+const { rabbitmq } = require('../config');
 
-amqp.connect('amqp://localhost', function(error, connection) {
-    if (error) {
-        throw error;
-    }
-    connection.createChannel(function(error, channel) {
-        if (error) {
-            throw error;
-        }
-        const exchangeName = 'consistent_exchange';
-        const exchangeType = 'x-consistent-hash';
-
-        channel.assertExchange(exchangeName, exchangeType, {
-            durable: true
-        });
+const initProducer = (async () => {
+    try {
+        const connection = await amqp.connect(rabbitmq.connectUrl);
+        const channel = await connection.createChannel()
+        await channel.assertExchange(rabbitmq.consistent.exchange.name, rabbitmq.consistent.exchange.type, { durable: true });
 
         if(process.argv[2] == 'loop') {
-            const loopTimes = Number(process.argv[3]);
+            const loopTimes = Number(process.argv[4]);
             for (let i = 0; i < loopTimes; i++) {
-                const routingKey = i.toString();
-                const msg = {
-                    msgId     : i,
-                    routingKey: i
+                const message = {
+                    id     : i.toString(),
+                    action : process.argv[3]
                 };
-                channel.publish(exchangeName, routingKey, Buffer.from(JSON.stringify(msg)));    
-                
-                console.log(`Loop Msg:${JSON.stringify(msg)} Sent Success!`);
-                console.log(' ');
+                channel.publish(rabbitmq.consistent.exchange.name, message.id, Buffer.from(JSON.stringify(message)));    
+                console.log(`(loop sent) message:[ ${JSON.stringify(message)} ] sent successfully !`);
             }
         } else {
-            const routingKey = process.argv[2];
-            const msg = {
-                msgId: process.argv[2]
+            const message = {
+                id    : process.argv[2],
+                action: process.argv[3]
             };
-            const loopTimes = Number(process.argv[3]);
+            const loopTimes = Number(process.argv[4]);
             for (let i = 0; i < loopTimes; i++) {
-                channel.publish(exchangeName, routingKey, Buffer.from(JSON.stringify(msg)));
-
-                console.log(`Msg:${JSON.stringify(msg)} Sent Success By RoutingKey:${JSON.stringify(msg)}`);
+                channel.publish(rabbitmq.consistent.exchange.name, message.id, Buffer.from(JSON.stringify(message)));
+                console.log(`(single sent) message [ ${JSON.stringify(message)} sent successfully !`);
             }
         }
-    });
+    } catch (error) {
+        console.error('Init producer failed:', error);
+    }
 });
+
+initProducer();
+
+// 使用方式
+
+// 1. 循环发送 id: 0 -> n 的消息
+// CMD: node ./consistent_hash/producer.js loop action(create|update) 1000
+
+// 2. 循环发送 n 次指定 id 的消息
+// CMD: node ./consistent_hash/producer.js id action(create|update) 100

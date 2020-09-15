@@ -1,11 +1,6 @@
-var amqp = require('amqplib/callback_api');
+var amqp = require('amqplib');
 
-var args = process.argv.slice(2);
 
-if (args.length == 0) {
-  console.log("Usage: receive_logs_direct.js [info] [warning] [error]");
-  process.exit(1);
-}
 
 amqp.connect('amqp://localhost', function(error, connection) {
   if (error) {

@@ -280,3 +280,13 @@ initProducer();
     2. https://stackoverflow.com/questions/38872992/rabbitmq-scaling-queues-with-the-consistent-hash-exchange
 
 
+## Unidirectionally moves messages from a source to a destination
+
++ ### Doc: **https://www.rabbitmq.com/shovel.html**
+
++ ### Steps:
+    1. `docker exec -it CONTAINER_ID /bin/bash`
+    2. `rabbitmq-plugins enable rabbitmq_shovel`
+    3. `rabbitmq-plugins enable rabbitmq_shovel_management`
+
+
