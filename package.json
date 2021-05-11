@@ -12,7 +12,7 @@
     "ioredis": "^4.6.2",
     "koa": "^2.12.0",
     "koa-route": "^3.2.0",
-    "lodash": "^4.17.4",
+    "lodash": "^4.17.21",
     "moment": "^2.24.0",
     "node-uuid": "^1.4.8",
     "bunnybus": "^4.2.1"
